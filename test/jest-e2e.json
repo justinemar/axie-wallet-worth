@@ -1,0 +1,19 @@
+{
+  "moduleFileExtensions": [
+    "js",
+    "json",
+    "ts"
+  ],
+  "rootDir": ".",
+  "testEnvironment": "node",
+  "testRegex": ".e2e-spec.ts$",
+  "transform": {
+    "^.+\\.(t|j)s$": "ts-jest"
+  },
+  "moduleNameMapper": {
+    "@mavis/queries/(.*)": "<rootDir>/../libs/queries/src/$1",
+    "@mavis/queries": "<rootDir>/../libs/queries/src",
+    "@redis/cache/(.*)": "<rootDir>/../libs/cache/src/$1",
+    "@redis/cache": "<rootDir>/../libs/cache/src"
+  }
+}
