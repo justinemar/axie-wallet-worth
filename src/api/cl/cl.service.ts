@@ -18,8 +18,8 @@ export class ClService {
      return await this.mavis.getAxieList(roninAddress);
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} cl`;
+  async findOne(roninAddress: string) {
+    return await this.mavis.refreshAxies(roninAddress);
   }
 
   update(id: number, updateClDto: UpdateClDto) {

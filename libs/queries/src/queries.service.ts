@@ -10,12 +10,18 @@ export class QueriesService {
       private http: HttpService,
       private cacheManager: CacheService
       ) {}
-    async getAxieList(roninAddress: string): Promise<any> {
+
+    async refreshAxies(roninAddress: string) : Promise<any> {
+        return this.getAxieList(roninAddress, true);
+    }
+
+    async getAxieList(roninAddress: string, refresh = false): Promise<any> {
         const cached = await this.cacheManager.get('getAllAxies')
-        if(cached) {
+        if(cached && !refresh) {
+          console.info("Get axie list from cached");
           return await this.getAxieMarket()
         }
-
+        console.info("Get axie list from graphql");
         const getAllAxies = {
             "operationName": "GetAxieBriefList",
             "variables": {
@@ -67,17 +73,19 @@ export class QueriesService {
       const cachedData = await this.cacheManager.get('getAllAxies');
       const response = await Promise.all(
         cachedData.data.axies.results.map(async (axie) => {
-        const cachedAxie = await this.cacheManager.get(axie.id);
+        let cachedAxie = await this.cacheManager.get(axie.id);
         if(cachedAxie) {
+          cachedAxie = { ...cachedAxie, fromExactAxie: axie.id };
           return cachedAxie;
         }
 
-        const data: any = await this.buildQuery(axie)
+        let data: any = await this.buildQuery(axie)
+        data = { ...data, fromExactAxie: axie.id };
         return data
       }));
 
-      const total = await this.calculateTotal(response);
-      return { total }
+      const { totalWorth, noMatch } = await this.calculateTotal(response);
+      return { totalWorth, noMatch }
     }
 
     async buildQuery(axie) {
@@ -166,9 +174,11 @@ export class QueriesService {
     
    async calculateTotal(data) {
       let totalWorth = 0;
+      const noMatch = [];
       data.map((item: any) => {
+        if(!item?.data?.axies?.results[0]?.auction?.currentPriceUSD) noMatch.push(item.fromExactAxie)
         totalWorth += parseInt(item?.data?.axies?.results[0]?.auction?.currentPriceUSD) || 0 
       })
-      return totalWorth;
+      return { totalWorth, noMatch};
     }
 }

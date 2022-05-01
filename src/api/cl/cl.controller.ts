@@ -12,15 +12,15 @@ export class ClController {
   create(@Body() createClDto: CreateClDto) {
     return this.clService.create(createClDto);
   }
-
+s
   @Get('axies/:address')
   async findAll(@Param('address') roninAddress) {
     return await this.clService.findAll(roninAddress);
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.clService.findOne(+id);
+  @Get('axies/:address/refresh')
+  findOne(@Param('address') roninAddress: string) {
+    return this.clService.findOne(roninAddress);
   }
 
   @Patch(':id')
