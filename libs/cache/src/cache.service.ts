@@ -10,7 +10,7 @@ export class CacheService {
     }
 
     async set(key, value) {
-        console.log('DATA SET', {key, value});
+        console.log('DATA SET', {key});
         await this.cache.set(key, value, 0);
     }
 

@@ -4,6 +4,8 @@ import { HttpService } from '@nestjs/axios';
 import { catchError, map, Observable } from 'rxjs';
 import { CacheService } from '@redis/cache';
 import fetch from 'node-fetch';
+import { AxieGene } from "agp-npm/dist/axie-gene"; // Defaults to HexType.Bit256
+
 @Injectable()
 export class QueriesService {
     constructor(
@@ -16,11 +18,13 @@ export class QueriesService {
     }
 
     async getAxieList(roninAddress: string, refresh = false): Promise<any> {
-        const cached = await this.cacheManager.get('getAllAxies')
+        roninAddress = roninAddress.replace('ronin:', '0x');
+        const cached = await this.cacheManager.get(`getAllAxies-${roninAddress}`)
         if(cached && !refresh) {
           console.info("Get axie list from cached");
-          return await this.getAxieMarket()
+          return await this.buildAxieCached(cached)
         }
+
         console.info("Get axie list from graphql");
         const getAllAxies = {
             "operationName": "GetAxieBriefList",
@@ -58,9 +62,10 @@ export class QueriesService {
               },
               body: JSON.stringify(getAllAxies)
             })
-            const data = await response.json();
-            await this.cacheManager.set('getAllAxies', data);
-            return await this.getAxieMarket()
+
+            const res = await response.json();
+            await this.cacheManager.set(`getAllAxies-${roninAddress}`, res);
+            return await this.getAxieMarket(res)
           } catch(err) {
             console.log(err)
             throw new HttpException(err?.response?.data, err?.response?.status);
@@ -69,27 +74,32 @@ export class QueriesService {
 
     }
 
-    async getAxieMarket(): Promise<any> {
-      const cachedData = await this.cacheManager.get('getAllAxies');
+    async buildAxieCached(cache): Promise<any> {
       const response = await Promise.all(
-        cachedData.data.axies.results.map(async (axie) => {
+        cache.data.axies.results.map(async (axie) => {
         let cachedAxie = await this.cacheManager.get(axie.id);
-        if(cachedAxie) {
-          cachedAxie = { ...cachedAxie, fromExactAxie: axie.id };
+          console.info("Build get exact axie from cached. 2")
+          cachedAxie = { ...cachedAxie, fromExactAxie: axie.id};
           return cachedAxie;
-        }
+      }));
 
+      return await this.calculateTotal(response);
+    }
+
+    async getAxieMarket(res): Promise<any> {
+      const response = await Promise.all(
+        res.data.axies.results.map(async (axie) => {
+        console.info("Build get exact axie from query.")
         let data: any = await this.buildQuery(axie)
-        data = { ...data, fromExactAxie: axie.id };
         return data
       }));
 
-      const { totalWorth, noMatch } = await this.calculateTotal(response);
-      return { totalWorth, noMatch }
+      return await this.calculateTotal(response);
     }
 
     async buildQuery(axie) {
       return new Promise(async (resolve, reject) => {
+        const axieGene = new AxieGene(axie.genes);
         const getAxieExact =  {
           "operationName": "GetAxieBriefList",
           "variables": {
@@ -98,8 +108,7 @@ export class QueriesService {
               "bodyShapes": null,
               "breedable": null,
               "breedCount": [
-                axie.breedCount,
-                7
+                axie.breedCount
               ],
               "classes": [
                 axie.class
@@ -125,11 +134,9 @@ export class QueriesService {
               "ppMech": null,
               "ppPlant": null,
               "ppReptile": null,
-              "pureness": [
-                axie.parts.filter((p) => p.class == axie.class).length
-              ],
+              "pureness": null,
               "purity": [
-                1,
+                parseInt(axieGene.getGeneQuality().toFixed()),
                 100
               ],
               "region": null,
@@ -161,10 +168,26 @@ export class QueriesService {
               },
               body: JSON.stringify(getAxieExact)
             })
-            const data = await response.json();
-            await this.cacheManager.set(`getAxieExact-${axie.id}`, getAxieExact);
-            await this.cacheManager.set(axie.id, data);
-            resolve(data);
+            let res = await response.json();
+            const cachedData = await this.cacheManager.get(`getAxieExact-${axie.id}`);
+
+            res = { 
+              ...res, 
+              floor_data: {
+                id: axie.id, 
+                axie_breedCount: axie.breedCount,
+                axie_image: axie.image,
+                axie_genes: axie.genes,
+                axie_class: axie.class,
+                previous_price: parseInt(cachedData?.data?.axies?.results[0]?.auction?.currentPriceUSD),
+                floor_price: parseInt(res?.data?.axies?.results[0]?.auction?.currentPriceUSD)
+              }
+            
+            };
+            await this.cacheManager.set(`getAxieExact-${axie.id}`, res);
+            await this.cacheManager.set(`getAxieExact-${axie.id}-req`, getAxieExact);
+            await this.cacheManager.set(axie.id, res);
+            resolve(res);
           } catch(err) {
             console.log(err)
             reject(err)
@@ -174,11 +197,21 @@ export class QueriesService {
     
    async calculateTotal(data) {
       let totalWorth = 0;
+      let ranking = [];
       const noMatch = [];
-      data.map((item: any) => {
-        if(!item?.data?.axies?.results[0]?.auction?.currentPriceUSD) noMatch.push(item.fromExactAxie)
-        totalWorth += parseInt(item?.data?.axies?.results[0]?.auction?.currentPriceUSD) || 0 
+      data.map((item) => {
+        // hardcored filter
+        if(item.floor_data.id == 4917720 || item.floor_data.id == 4917569 || item.floor_data.id == 9171436 || item.floor_data.id == 3670134) return;
+       
+        if(!item.floor_data.floor_price) noMatch.push(item.floor_data.id)
+        ranking.push({
+          ...item.floor_data,
+          myaxie_link: `https://marketplace.axieinfinity.com/axie/${item.id}`,
+          floor_link: `https://marketplace.axieinfinity.com/axie/${item?.data?.axies?.results[0]?.id}`
+        });
+        totalWorth += parseInt(item.floor_data.floor_price) || 0 
       })
-      return { totalWorth, noMatch};
+      ranking.sort((a, b) => b.floor_price-a.floor_price);
+      return { totalWorth, noMatch, ranking };
     }
 }
