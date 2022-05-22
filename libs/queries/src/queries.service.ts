@@ -1,7 +1,5 @@
 import { HttpException, Injectable } from '@nestjs/common';
 import { getBriftList, getExact } from '.'
-import { HttpService } from '@nestjs/axios';
-import { catchError, map, Observable } from 'rxjs';
 import { CacheService } from '@redis/cache';
 import fetch from 'node-fetch';
 import { AxieGene } from "agp-npm/dist/axie-gene"; // Defaults to HexType.Bit256
@@ -9,7 +7,6 @@ import { AxieGene } from "agp-npm/dist/axie-gene"; // Defaults to HexType.Bit256
 @Injectable()
 export class QueriesService {
     constructor(
-      private http: HttpService,
       private cacheManager: CacheService
       ) {}
 
