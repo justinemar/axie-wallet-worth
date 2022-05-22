@@ -202,11 +202,10 @@ export class QueriesService {
       data.map((item) => {
         // hardcored filter
         if(item.floor_data.id == 4917720 || item.floor_data.id == 4917569 || item.floor_data.id == 9171436 || item.floor_data.id == 3670134) return;
-       
         if(!item.floor_data.floor_price) noMatch.push(item.floor_data.id)
         ranking.push({
           ...item.floor_data,
-          myaxie_link: `https://marketplace.axieinfinity.com/axie/${item.id}`,
+          myaxie_link: `https://marketplace.axieinfinity.com/axie/${item.floor_data.id}`,
           floor_link: `https://marketplace.axieinfinity.com/axie/${item?.data?.axies?.results[0]?.id}`
         });
         totalWorth += parseInt(item.floor_data.floor_price) || 0 
