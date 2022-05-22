@@ -30,6 +30,7 @@
     "@nestjs/graphql": "^10.0.8",
     "@nestjs/mapped-types": "*",
     "@nestjs/platform-express": "^8.0.0",
+    "agp-npm": "^1.0.10",
     "graphql": "^16.3.0",
     "node-fetch": "^2.6.7",
     "reflect-metadata": "^0.1.13",
