@@ -165,8 +165,10 @@ export class QueriesService {
               body: JSON.stringify(getAxieExact)
             })
             let res = await response.json();
-            const cachedData = await this.cacheManager.get(`getAxieExact-${axie.id}`);
-
+            const cachedPrice = await this.cacheManager.get(`priceAction-${axie.id}`);
+            const floor_price = parseInt(res?.data?.axies?.results[0]?.auction?.currentPriceUSD);
+            const previous_price = parseInt(cachedPrice?.previous_price);
+            console.log('cachedPrice', cachedPrice)
             res = { 
               ...res, 
               floor_data: {
@@ -175,12 +177,13 @@ export class QueriesService {
                 axie_image: axie.image,
                 axie_genes: axie.genes,
                 axie_class: axie.class,
-                previous_price: parseInt(cachedData?.data?.axies?.results[0]?.auction?.currentPriceUSD),
-                floor_price: parseInt(res?.data?.axies?.results[0]?.auction?.currentPriceUSD)
+                previous_price,
+                floor_price
               }
             
             };
             await this.cacheManager.set(`getAxieExact-${axie.id}`, res);
+            await this.cacheManager.set(`priceAction-${axie.id}`, { previous_price: floor_price});
             resolve(res);
           } catch(err) {
             console.log(err)

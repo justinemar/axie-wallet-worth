@@ -10,8 +10,10 @@ export class CacheService {
     }
 
     async set(key, value) {
+        let ttl = 0;
+        if(key.split("-")[0] == 'priceAction') ttl = 18000; // override default ttl from 24 to 5 hrs
+        await this.cache.set(key, value, ttl);
         console.log('DATA SET', {key});
-        await this.cache.set(key, value, 0);
     }
 
     async reset() {
