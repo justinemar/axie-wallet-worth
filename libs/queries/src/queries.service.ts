@@ -74,9 +74,8 @@ export class QueriesService {
     async buildAxieCached(cache): Promise<any> {
       const response = await Promise.all(
         cache.data.axies.results.map(async (axie) => {
-        let cachedAxie = await this.cacheManager.get(axie.id);
-          console.info("Build get exact axie from cached. 2")
-          cachedAxie = { ...cachedAxie, fromExactAxie: axie.id};
+        let cachedAxie = await this.cacheManager.get(`getAxieExact-${axie.id}`);
+          console.info("Build get exact axie from cached.")
           return cachedAxie;
       }));
 
@@ -182,8 +181,6 @@ export class QueriesService {
             
             };
             await this.cacheManager.set(`getAxieExact-${axie.id}`, res);
-            await this.cacheManager.set(`getAxieExact-${axie.id}-req`, getAxieExact);
-            await this.cacheManager.set(axie.id, res);
             resolve(res);
           } catch(err) {
             console.log(err)
