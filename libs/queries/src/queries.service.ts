@@ -198,7 +198,7 @@ export class QueriesService {
       const noMatch = [];
       data.map((item) => {
         // hardcored filter
-        if(item.floor_data.id == 4917720 || item.floor_data.id == 4917569 || item.floor_data.id == 9171436 || item.floor_data.id == 3670134) return;
+        // if(item.floor_data.id == 4917720 || item.floor_data.id == 4917569 || item.floor_data.id == 9171436 || item.floor_data.id == 3670134) return;
         if(!item.floor_data.floor_price) noMatch.push(item.floor_data.id)
         ranking.push({
           ...item.floor_data,
